@@ -40,7 +40,7 @@
           success: function(data){
             // Get the key in bytes
             key_ = getUrlVars()["key"];
-            var key = Uint8Array();
+            var key = Array();
             for (var i=0; i<key_.length; i++)
               key.push(key_.charCodeAt(i));
 
