@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Voice Coder</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+    <script type="text/javascript" src="./lib/JsQRScanner/jsqrscanner.nocache.js"></script>
+    <script type="text/javascript" src="./lib/aes-js/index.js"></script>
+    <script type="text/javascript" src="./lib/howler.js/howler.min.js"></script>
+  </head>
+  <body class="text-center">
+    <div class="container">
+      <div class="jumbotron mt-3">
+        <h1>Voice Box</h1>
+        <a class="btn btn-lg btn-primary" role="button" id="btn-play" style="color: #fff;">PLAY</a>
+        <!-- <a class="btn btn&#45;lg btn&#45;primary" role="button" id="btn&#45;encode" style="color: #fff;">Encode</a> -->
+      </div>
+    </div>
+    <div id="debug" style="display: none;"></div>
+  <script type="text/javascript">
+    function getUrlVars() {
+      var vars = {};
+      var parts = window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi, function(m,key,value) {
+        vars[key] = value;
+      });
+      return vars;
+    }
+    $(document).ready(function(){
+        var path = './voice/' + getUrlVars()["id"] + '.enc';
+        $.ajax({
+          url: path,
+          cache:false,
+          xhrFields:{
+            responseType: 'arraybuffer'
+          },
+          success: function(data){
+            // Get the key in bytes
+            key_ = getUrlVars()["key"];
+            var key = Uint8Array();
+            for (var i=0; i<key_.length; i++)
+              key.push(key_.charCodeAt(i));
+
+            // The initialization vector (must be 16 bytes)
+            var iv = [70, 69, 68, 67, 66, 65, 57, 56, 55, 54, 53, 52, 51, 50, 49, 48]
+            var aesCbc = new aesjs.ModeOfOperation.cbc(key, iv);
+            var bytes = new Uint8Array(data)
+            var decryptedBytes = aesCbc.decrypt(bytes);
+
+            // Convert our bytes back into text
+            var decryptedText = aesjs.utils.utf8.fromBytes(decryptedBytes);
+            var blob = new Blob([decryptedBytes], { type: 'audio/mp3' });
+
+            // Create an blob object
+            var url = window.URL || window.webkitURL;
+            blob_url = url.createObjectURL(blob);
+            $("#debug").html(blob_url);
+
+            // Auto play it to workaround IOS safari restriction on auto-play
+            var sound = new Howl({
+              src: [blob_url],
+              format: ['mp3'],
+              autoplay: true,
+              volumn: 0
+            });
+
+            sound.play();
+
+            $("#btn-play").click(function() {
+              sound.play();
+            });
+          },
+          error:function(err){
+            $("#debug").html(err);
+          }
+        });
+    });
+  </script>
+  </body>
+</html>
